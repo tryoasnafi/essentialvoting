@@ -10,7 +10,7 @@ export default function Home() {
           <Link href="/voters/login">Voters</Link>
         </Button>
         <Button asChild>
-          <Link href="/organizations/login">Organizations</Link>
+          <Link href="/organizers/login">Organizers</Link>
         </Button>
       </div>
     </main>
