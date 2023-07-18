@@ -52,11 +52,85 @@ function newWallet() {
   return wallet
 }
 
+interface Voter {
+  name: string;
+  email: string;
+}
+
+function parseCsv(file: File, separator = ","): Promise<Voter[]> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const textCsv: string = evt.target?.result as string;
+      const csvLines = textCsv.split(/\r?\n/);
+      const header = csvLines.shift();
+      const voters: Voter[] = csvLines.map((line, i) => {
+        const values = line.split(separator);
+        return {
+          name: values[0],
+          email: values[1],
+        } as Voter
+      })
+      console.log(voters);
+      resolve(voters);
+    };
+    reader.onerror = (evt) => {
+      reject(evt.target?.error);
+    }
+    reader.readAsText(file);
+  })
+}
+
+function download(filename: string, text: string) {
+  var element = document.createElement('a');
+  element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+  element.setAttribute('download', filename);
+
+  element.style.display = 'none';
+  document.body.appendChild(element);
+
+  element.click();
+
+  document.body.removeChild(element);
+}
+
+interface PrivateKeyAlertProps {
+  privateKey: string
+  electionTitle: string
+  isOpen: boolean
+  setIsOpen: React.Dispatch<React.SetStateAction<boolean>>
+}
+
+function PrivateKeyAlert({ privateKey, electionTitle, isOpen, setIsOpen }: PrivateKeyAlertProps) {
+  const formattedTitle = electionTitle.toLowerCase().replaceAll(" ", "-");
+  return (
+    <AlertDialog open={isOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Save your secret phrase!</AlertDialogTitle>
+          <AlertDialogDescription className="break-all">
+            <p className="flexgap-2 my-4">{privateKey}</p>
+            <small className="text-red-500">We don't save your secret phrase, make sure it's safe, and don't share it, becareful it loss permanently, we can't recover it</small>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogAction onClick={() => {
+            // download phrases
+            download(`privatekey_${formattedTitle}.txt`, privateKey);
+            setIsOpen(false);
+          }}>I understand</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
 export default function OrganizersLogin() {
   const initialStartTime = new Date();
   const initialEndTime = new Date(initialStartTime.getTime() + 30 * 60000);
-  const [isOpen, setIsOpen] = useState(false);
-  const [mnemonic, setMnemonic] = useState("");
+  const [isPrivateKeyDialogOpen, setIsPrivateKeyDialogOpen] = useState(false);
+  const [privateKey, setPrivateKey] = useState("");
+  const [electionTitle, setElectionTitle] = useState("");
 
   const form = useForm<z.infer<typeof ElectionSchema>>({
     resolver: zodResolver(ElectionSchema),
@@ -70,90 +144,15 @@ export default function OrganizersLogin() {
     }
   })
 
-  interface Voter {
-    name: string;
-    email: string;
-  }
-
-  function parseCsv(file: File, separator = ","): Promise<Voter[]> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        const textCsv: string = evt.target?.result as string;
-        const csvLines = textCsv.split(/\r?\n/);
-        const header = csvLines.shift();
-        const voters: Voter[] = csvLines.map((line, i) => {
-          const values = line.split(separator);
-          return {
-            name: values[0],
-            email: values[1],
-          } as Voter
-        })
-        console.log(voters);
-        resolve(voters);
-      };
-      reader.onerror = (evt) => {
-        reject(evt.target?.error);
-      }
-      reader.readAsText(file);
-    })
-  }
-
-  function download(filename: string, text: string) {
-    var element = document.createElement('a');
-    element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
-    element.setAttribute('download', filename);
-
-    element.style.display = 'none';
-    document.body.appendChild(element);
-
-    element.click();
-
-    document.body.removeChild(element);
-  }
-  function CustomAlert({ message }: { message: string }) {
-
-    const phrases = message.split(" ").map((word) => {
-      return <Badge>{word}</Badge>
-    })
-    return (
-      <AlertDialog open={isOpen} onOpenChange={() => {
-        setMnemonic("");
-        setIsOpen(false);
-      }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Save your secret phrase!</AlertDialogTitle>
-            <AlertDialogDescription>
-              <div className="flex flex-wrap gap-2 my-4" >{phrases}</div>
-              <small className="text-red-500">We don't save your secret phrase, make sure it's safe, and don't share it, becareful it loss permanently, we can't recover it</small>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction onClick={() => {
-              // download phrases
-              download("phrases.txt", message);
-            }}>I understand</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    );
-  }
-
   async function onSubmit(values: z.infer<typeof ElectionSchema>) {
     console.log(values)
     console.log(values.votersCsv[0])
     const text = await parseCsv(values.votersCsv[0]);
     const walletOrganizer = newWallet();
 
-    setMnemonic(walletOrganizer.mnemonic?.phrase ?? "");
-    setIsOpen(true);
-    const mnemonicString = 'spring poet oxygen diet emerge super hole type index cattle pride bunker';
-    const walletMnemonic = ethers.Wallet.fromPhrase(mnemonicString);
-    console.log(walletOrganizer);
-    console.log(walletMnemonic);
-    console.log(text);
-
+    setElectionTitle(values.votingName);
+    setPrivateKey(walletOrganizer.privateKey);
+    setIsPrivateKeyDialogOpen(true);
 
     // toast({
     //   title: "Voting Events:",
@@ -163,13 +162,6 @@ export default function OrganizersLogin() {
     // })
   }
 
-  // const BUTTON_STATE = () => {
-  //   if (form.formState.isSubmitting) {
-  //     console.log("submitting")
-  //     return <ButtonLoading message="Loading" />
-  //   }
-  //   return <Button type="submit"> Submit </Button>
-  // }
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center px-4 py-8">
@@ -258,7 +250,11 @@ export default function OrganizersLogin() {
           {/* <ButtonLoading message="Loading" /> */}
         </form>
       </Form>
-      <CustomAlert message={mnemonic} />
+      <PrivateKeyAlert
+        privateKey={privateKey}
+        electionTitle={electionTitle}
+        isOpen={isPrivateKeyDialogOpen}
+        setIsOpen={setIsPrivateKeyDialogOpen} />
     </main>
   )
 }
