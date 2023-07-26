@@ -16,24 +16,80 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { toast } from "@/components/ui/use-toast";
+import { completeSignIn, getElectionsByEmail, sendOneTimeLink } from "@/lib/firebase-config";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 const formSchema = z.object({
   email: z.string().email(),
 })
 
+function setIsOneTimeLinkSent(value: string) {
+  window.localStorage.setItem("isOneTimeLinkSent", value);
+}
+
 export default function VotersLogin() {
+  const router = useRouter();
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
+    defaultValues: {
+      email: "",
+    }
   })
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    const elections = await getElectionsByEmail(values.email);
+    if (elections.length < 1) {
+      toast({
+        variant: "destructive",
+        title: "You don't have any elections",
+        description: "Register your email to an election organizer",
+      });
+      return false;
+    }
+
+    window.localStorage.setItem("electionId", elections[elections.length - 1].id);
+
+    const CURRENT_URL = `http://${window.location.host}/voters/login`;
+    const [message, isSuccess] = await sendOneTimeLink(values.email, CURRENT_URL);
+    if (!isSuccess) {
+      setIsOneTimeLinkSent("0");
+      toast({
+        title: "Error",
+        description: message,
+      })
+      return false;
+    }
+
+    setIsOneTimeLinkSent("1");
     toast({
       title: "Please check your email",
       description: (
-        <p>Email verification has been sent to {values.email}</p>
+        <p>{message}. Email verification has been sent to {values.email}</p>
       ),
     })
   }
+
+  useEffect(() => {
+    const checkOneTimeLink = async () => {
+      const isOneTimeLinkSent = window.localStorage.getItem("isOneTimeLinkSent");
+      console.log(isOneTimeLinkSent);
+      if (isOneTimeLinkSent == "1") {
+        const isValid = await completeSignIn();
+        console.log(isValid);
+        const electionId = window.localStorage.getItem("electionId");
+        console.log(electionId);
+        if (isValid) {
+          const ELECTION_URL = `http://${window.location.host}/elections/${electionId}/vote`;
+          setIsOneTimeLinkSent("0");
+          router.push(ELECTION_URL);
+        }
+      }
+    }
+
+    checkOneTimeLink();
+  }, []);
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center">
@@ -47,7 +103,7 @@ export default function VotersLogin() {
               <FormItem className="mr-2">
                 <FormLabel>Email</FormLabel>
                 <FormControl>
-                  <Input placeholder="mail@example.com" {...field} />
+                  <Input type="email" placeholder="mail@example.com" {...field} />
                 </FormControl>
                 <FormDescription>
                   This is your voting email registered by organizer.
@@ -57,7 +113,6 @@ export default function VotersLogin() {
             )}
           />
           <Button type="submit"><Mail className="mr-2 h-4 w-4" /> Verify </Button>
-          {/* <ButtonLoading message="Loading" /> */}
         </form>
       </Form>
     </main>

@@ -3,12 +3,11 @@
 import * as z from "zod"
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useController, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -17,17 +16,12 @@ import {
 import { toast } from "@/components/ui/use-toast";
 import InputCandidates from "@/components/ui/elections/input-candidates"
 import { DateTimePicker } from "@/components/ui/custom/date-time-picker";
-import { Label } from "@/components/ui/label";
-import { useState } from "react";
-import { ButtonLoading } from "@/components/ui/custom/button-loading";
-import { ethers } from "ethers";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge";
+import { useRef, useState } from "react";
+import { BaseWallet, Contract, JsonRpcProvider, Signer, Wallet } from "ethers";
+import { dateToTimestamp, generateUUID } from "@/lib/utils";
+import { CONTRACT_ABI, CONTRACT_ADDRESS, NODE_RPC_URL } from "@/lib/contract";
+import PrivateKeyAlert from "@/components/ui/custom/private-key-alert";
+import { getVoterAddress, getVoterKey, saveElection, saveVoterKey } from "@/lib/firebase-config";
 
 const MEGABYTE = 1024 * 1024;
 const MAX_FILE_SIZE_MB = 2;
@@ -47,11 +41,6 @@ const ElectionSchema = z.object({
   votersCsv: z.custom<FileList>(),
 })
 
-function newWallet() {
-  const wallet = ethers.Wallet.createRandom();
-  return wallet
-}
-
 interface Voter {
   name: string;
   email: string;
@@ -63,8 +52,8 @@ function parseCsv(file: File, separator = ","): Promise<Voter[]> {
     reader.onload = (evt) => {
       const textCsv: string = evt.target?.result as string;
       const csvLines = textCsv.split(/\r?\n/);
-      const header = csvLines.shift();
-      const voters: Voter[] = csvLines.map((line, i) => {
+      csvLines.shift();
+      const voters: Voter[] = csvLines.map((line) => {
         const values = line.split(separator);
         return {
           name: values[0],
@@ -81,56 +70,45 @@ function parseCsv(file: File, separator = ","): Promise<Voter[]> {
   })
 }
 
-function download(filename: string, text: string) {
-  var element = document.createElement('a');
-  element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
-  element.setAttribute('download', filename);
-
-  element.style.display = 'none';
-  document.body.appendChild(element);
-
-  element.click();
-
-  document.body.removeChild(element);
+function getContract(runner: Signer): Contract {
+  return new Contract(CONTRACT_ADDRESS, CONTRACT_ABI, runner);
 }
 
-interface PrivateKeyAlertProps {
-  privateKey: string
-  electionTitle: string
-  isOpen: boolean
-  setIsOpen: React.Dispatch<React.SetStateAction<boolean>>
+function newWallet(privateKey?: string): BaseWallet {
+  if (privateKey) {
+    return new Wallet(privateKey);
+  }
+  return Wallet.createRandom();
 }
 
-function PrivateKeyAlert({ privateKey, electionTitle, isOpen, setIsOpen }: PrivateKeyAlertProps) {
-  const formattedTitle = electionTitle.toLowerCase().replaceAll(" ", "-");
-  return (
-    <AlertDialog open={isOpen}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Save your secret phrase!</AlertDialogTitle>
-          <AlertDialogDescription className="break-all">
-            <p className="flexgap-2 my-4">{privateKey}</p>
-            <small className="text-red-500">We don't save your secret phrase, make sure it's safe, and don't share it, becareful it loss permanently, we can't recover it</small>
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogAction onClick={() => {
-            // download phrases
-            download(`privatekey_${formattedTitle}.txt`, privateKey);
-            setIsOpen(false);
-          }}>I understand</AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
+function generateWallets(total: number) {
+  // generate wallet for total
+  let wallets = [];
+  for(let i = 0; i < total; i++) {
+    wallets.push(newWallet());
+  }
+  return wallets;
 }
+
+const provider = new JsonRpcProvider(NODE_RPC_URL);
+provider.on("block", async (blockNumber) => {
+  const block = await provider.getBlock(blockNumber, true);
+  console.log("New block:", block);
+  console.log("Transactions:", block?.prefetchedTransactions);
+});
+
 
 export default function OrganizersLogin() {
-  const initialStartTime = new Date();
+  const initialStartTime = new Date((new Date).getTime() + 30 * 60000);
   const initialEndTime = new Date(initialStartTime.getTime() + 30 * 60000);
   const [isPrivateKeyDialogOpen, setIsPrivateKeyDialogOpen] = useState(false);
   const [privateKey, setPrivateKey] = useState("");
   const [electionTitle, setElectionTitle] = useState("");
+  const uuid = useRef(generateUUID());
+  const disclosurePageUrl = `/elections/${uuid.current}/disclosure`;
+
+  // TODO: inserting each address voters
+  // TODO: insert voter email and wallet secret phrases to firebase
 
   const form = useForm<z.infer<typeof ElectionSchema>>({
     resolver: zodResolver(ElectionSchema),
@@ -140,28 +118,83 @@ export default function OrganizersLogin() {
       candidates: [
         { "value": "" },
         { "value": "" }
-      ]
+      ],
+      votingDescription: "",
+      votingName: "",
     }
   })
 
   async function onSubmit(values: z.infer<typeof ElectionSchema>) {
     console.log(values)
     console.log(values.votersCsv[0])
-    const text = await parseCsv(values.votersCsv[0]);
-    const walletOrganizer = newWallet();
+    const voters = await parseCsv(values.votersCsv[0]);
+    const walletOrganizer = Wallet.createRandom();
+    const randomWalletVoter = generateWallets(voters.length);
+
+    const owner = await provider.getSigner();
+    const electionContract = getContract(owner);
+    try {
+      await electionContract.createElection(
+        values.votingName,
+        values.candidates.map(c => c.value),
+        dateToTimestamp(values.startTime),
+        dateToTimestamp(values.endTime), 
+        randomWalletVoter.map((w) => w.address)
+      );
+
+      const lastIndex = parseInt(await electionContract.counter()) - 1;
+      console.log("counter: ", lastIndex);
+      
+      // save election metadata to firebase
+      await saveElection({
+        id: uuid.current,
+        title: values.votingName,
+        voterEmails: voters.map((voter) => voter.email),
+        electionIndex: lastIndex,
+      });
+
+      console.log(await electionContract.getElectionByIndex(lastIndex));
+
+      // send eth to each wallet
+      const ONE_PERMILLE_ETH = "1000000000000000";
+      randomWalletVoter.forEach(async (wallet, i) => {
+        const [address, isExist] = await getVoterAddress(voters[i].email);
+        let walletAddress = wallet.address;
+        // if (!isExist) walletAddress = address;
+        
+        await owner.sendTransaction({
+          to: walletAddress,
+          value: ONE_PERMILLE_ETH,
+        });
+
+        // binding wallet to voter
+        saveVoterKey(voters[i].email, wallet.address.toLowerCase(), wallet.privateKey);
+      });
+
+      toast({
+        title: "Election Created Successfully",
+        description: (
+          <pre>{JSON.stringify(values, null, 2)}</pre>
+        ),
+      })
+      
+      // clear Form
+      // form.reset();
+    } catch (error: any) {
+      const revertedReason = error.message.split(", ")[2].split("=")[1];
+      toast({
+        variant: "destructive",
+        title: "Election Creation Failed",
+        description: (
+          <p>Execution reverted: {revertedReason}</p>
+        ),
+      })
+    }
 
     setElectionTitle(values.votingName);
     setPrivateKey(walletOrganizer.privateKey);
     setIsPrivateKeyDialogOpen(true);
-
-    // toast({
-    //   title: "Voting Events:",
-    //   description: (
-    //     <pre>{JSON.stringify(values, null, 2)}</pre>
-    //   ),
-    // })
   }
-
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center px-4 py-8">
@@ -253,6 +286,7 @@ export default function OrganizersLogin() {
       <PrivateKeyAlert
         privateKey={privateKey}
         electionTitle={electionTitle}
+        redirectUrl={disclosurePageUrl}
         isOpen={isPrivateKeyDialogOpen}
         setIsOpen={setIsPrivateKeyDialogOpen} />
     </main>

@@ -26,7 +26,8 @@ describe("EssentialVoting", function () {
                 title,
                 candidates,
                 BigNumber.from(startTime),
-                BigNumber.from(endTime)
+                BigNumber.from(endTime),
+                [voter1.address]
             ])
         })
         it("should revert if the election has less than 2 candidates", async function () {

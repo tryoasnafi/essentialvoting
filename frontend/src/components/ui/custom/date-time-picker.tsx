@@ -70,7 +70,7 @@ export function DateTimePicker({ date, setDate }: DateTimePickerProps) {
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
           {date ? (
-            selectedDateTime.toFormat('DDD HH:mm')
+            selectedDateTime.toFormat('MMMM dd, yyyy HH:mm')
           ) : (
             <span>Pick a date</span>
           )}
