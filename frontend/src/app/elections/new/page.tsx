@@ -125,8 +125,6 @@ export default function OrganizersLogin() {
   })
 
   async function onSubmit(values: z.infer<typeof ElectionSchema>) {
-    console.log(values)
-    console.log(values.votersCsv[0])
     const voters = await parseCsv(values.votersCsv[0]);
     const walletOrganizer = Wallet.createRandom();
     const randomWalletVoter = generateWallets(voters.length);
@@ -143,7 +141,6 @@ export default function OrganizersLogin() {
       );
 
       const lastIndex = parseInt(await electionContract.counter()) - 1;
-      console.log("counter: ", lastIndex);
       
       // save election metadata to firebase
       await saveElection({
@@ -153,14 +150,11 @@ export default function OrganizersLogin() {
         electionIndex: lastIndex,
       });
 
-      console.log(await electionContract.getElectionByIndex(lastIndex));
-
       // send eth to each wallet
       const ONE_PERMILLE_ETH = "1000000000000000";
       randomWalletVoter.forEach(async (wallet, i) => {
         const [address, isExist] = await getVoterAddress(voters[i].email);
         let walletAddress = wallet.address;
-        // if (!isExist) walletAddress = address;
         
         await owner.sendTransaction({
           to: walletAddress,
@@ -179,7 +173,7 @@ export default function OrganizersLogin() {
       })
       
       // clear Form
-      // form.reset();
+      form.reset();
     } catch (error: any) {
       const revertedReason = error.message.split(", ")[2].split("=")[1];
       toast({

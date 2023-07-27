@@ -14,6 +14,10 @@ export function dateToTimestamp(date: Date) {
   return Math.floor(date.getTime() / 1000);
 }
 
+export function timestampToDate(timestamp: number) {
+  return new Date(timestamp * 1000);
+}
+
 export function generateUUID() {
   let d = new Date().getTime();
   let d2 = ((typeof performance !== 'undefined') && performance.now && (performance.now() * 1000)) || 0;

@@ -1,6 +1,7 @@
 {
   "name": "hardhat-project",
   "scripts": {
+    "node": "npx hardhat node --hostname 0.0.0.0",
     "test": "npx hardhat test",
     "compile": "npx hardhat compile",
     "deploy": "TS_NODE_FILES=true npx hardhat run scripts/deploy.ts --network localhost"

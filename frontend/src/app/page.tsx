@@ -24,19 +24,6 @@ export default function Home() {
         <Button variant="outline">
           <Link href="/voters/login" className='flex items-center'> <Mail className="mr-2 h-4 w-4" /> Vote</Link>
         </Button>
-        {/* <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline">Login as <ChevronDown className="ml-2 h-4 w-4" /></Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem asChild>
-              <Link href="/voters/login">Voters</Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/organizers/login">Organizers</Link>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu> */}
       </div>
     </main >
   )

@@ -110,7 +110,7 @@ export default function VotingPage({ params }: { params: { id: string } }) {
           <p> Cast Vote for {electionInfo.title} recorded successfully </p>
         ),
       })
-      userSignOut();
+      setTimeout(userSignOut, 3000);
       router.push(`/elections/${id}/disclosure`);
     } catch (e: any) {
       console.log(e.message);
