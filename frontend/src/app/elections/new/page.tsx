@@ -174,7 +174,15 @@ export default function OrganizersLogin() {
       
       // clear Form
       form.reset();
+
+      
+      setElectionTitle(values.votingName);
+      setPrivateKey(walletOrganizer.privateKey);
+      setIsPrivateKeyDialogOpen(true);
+
     } catch (error: any) {
+      setIsPrivateKeyDialogOpen(false);
+
       const revertedReason = error.message.split(", ")[2].split("=")[1];
       toast({
         variant: "destructive",
@@ -184,10 +192,6 @@ export default function OrganizersLogin() {
         ),
       })
     }
-
-    setElectionTitle(values.votingName);
-    setPrivateKey(walletOrganizer.privateKey);
-    setIsPrivateKeyDialogOpen(true);
   }
 
   return (

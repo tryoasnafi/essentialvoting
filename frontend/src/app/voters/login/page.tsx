@@ -96,22 +96,22 @@ export default function VotersLogin() {
       <h1 className="text-3xl pb-8 -mt-24"> Voter Verification </h1>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col md:flex-row w-full max-w-md px-4 space-y-8">
-  <FormField
-    control={form.control}
-    name="email"
-    render={({ field }) => (
-      <FormItem className="mr-2">
-        <FormLabel>Email</FormLabel>
-        <FormControl>
-          <Input type="email" placeholder="mail@example.com" {...field} />
-        </FormControl>
-        <FormDescription>
-          This is your voting email registered by organizer.
-        </FormDescription>
-        <FormMessage />
-      </FormItem>
-    )}
-  />
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem className="mr-2">
+                <FormLabel>Email</FormLabel>
+                <FormControl>
+                  <Input type="email" placeholder="mail@example.com" {...field} />
+                </FormControl>
+                <FormDescription>
+                  This is your voting email registered by organizer.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           <Button type="submit"><Mail className="mr-2 h-4 w-4" /> Verify </Button>
         </form>
       </Form>
