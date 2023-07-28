@@ -14,8 +14,33 @@ export function dateToTimestamp(date: Date) {
   return Math.floor(date.getTime() / 1000);
 }
 
+const SECOND = 1000;
+const MINUTE = 60 * SECOND;
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
+
 export function timestampToDate(timestamp: number) {
   return new Date(timestamp * 1000);
+}
+
+
+function twoDigitsTime(num: number): string {
+  if (num < 10) return "0" + num;
+  return `${num}`;
+}
+
+export function timer(timestamp: number) {
+  if (timestamp < 0) return "00:00:00";
+
+  const timeLeft = timestamp * 1000;
+  const days = Math.floor(timeLeft / DAY);
+  const hours = Math.floor((timeLeft % DAY) / HOUR);
+  const minutes = Math.floor((timeLeft % HOUR) / MINUTE);
+  const seconds = Math.floor((timeLeft % MINUTE) / SECOND);
+  let formattedDate = '';
+  if (days > 0) formattedDate += `${days}d `;
+  formattedDate += `${twoDigitsTime(hours)}:${twoDigitsTime(minutes)}:${twoDigitsTime(seconds)}`;
+  return formattedDate;
 }
 
 export function generateUUID() {

@@ -70,12 +70,6 @@ contract EssentialVoting {
     }
 
     function castVote(uint256 index, uint256 candidateId) external {
-        console.log(
-            "address %s is in eligible voters: %s",
-            msg.sender,
-            eligibleVoter[index][msg.sender]
-        );
-        console.log("hasVoted: %s", hasVoted[index][msg.sender]);
         require(eligibleVoter[index][msg.sender], "voter not eligible");
         require(!hasVoted[index][msg.sender], "voter has already voted");
         require(
@@ -92,6 +86,7 @@ contract EssentialVoting {
         uint256 index,
         uint256 candidateId
     ) external view returns (uint256) {
+        require(block.timestamp > _elections[index].endTime, "tally before the end time");
         return _tally[index][candidateId];
     }
 }

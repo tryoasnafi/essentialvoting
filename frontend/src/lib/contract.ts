@@ -5,7 +5,7 @@ import { getElectionById } from './firebase-config';
 
 export const CONTRACT_ABI = EssentialVoting.abi;
 export const CONTRACT_ADDRESS = '0x5fbdb2315678afecb367f032d93f642f64180aa3';
-export const NODE_RPC_URL = 'http://192.168.1.20:8545';
+export const NODE_RPC_URL = process.env.NGROK_NODE_RPC_URL || 'http://localhost:8545';
 
 export const PROVIDER = new JsonRpcProvider(NODE_RPC_URL);
 function claimMyWallet(privateKey: string) {

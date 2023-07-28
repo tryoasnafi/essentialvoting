@@ -1,5 +1,6 @@
 'use client'
 
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import CustomBarChart from "@/components/ui/custom/bar-chart";
 import CustomPieChart from "@/components/ui/custom/pie-chart";
@@ -7,7 +8,7 @@ import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, Tabl
 import { CONTRACT_ABI, CONTRACT_ADDRESS, CastVoteEventLog, NODE_RPC_URL, PROVIDER, getElectionDetails, getPastVoteEvents } from "@/lib/contract";
 import { getElectionById } from "@/lib/firebase-config";
 import { Election } from "@/lib/types";
-import { now, timestampToDate } from "@/lib/utils";
+import { now, timer, timestampToDate } from "@/lib/utils";
 import { Contract, JsonRpcProvider } from "ethers";
 import { useRouter } from "next/navigation";
 import { Dispatch, SetStateAction, useEffect, useState } from "react";
@@ -74,6 +75,7 @@ function listenToCastVoteEvent({contract, electionInfo, castVoteEvents, setCastV
   });
 }
 
+const contract = new Contract(CONTRACT_ADDRESS, CONTRACT_ABI, PROVIDER);
 
 export default function ElectionDisclosurePage({ params }: { params: { id: string } }) {
   const { id } = params
@@ -83,7 +85,6 @@ export default function ElectionDisclosurePage({ params }: { params: { id: strin
   const [ remainingTime, setRemainingTime ] = useState(0);
   const [ castVoteEvents, setCastVoteEvents ] = useState<CastVoteEventLog[]>([]);
 
-  const contract = new Contract(CONTRACT_ADDRESS, CONTRACT_ABI, PROVIDER);
   const [electionInfo, setElectionInfo] = useState<ElectionInfo>({
     id: "",
     electionIndex: 0,
@@ -133,17 +134,40 @@ export default function ElectionDisclosurePage({ params }: { params: { id: strin
 
     listenToCastVoteEvent({contract, electionInfo, castVoteEvents, setCastVoteEvents});
     callElectionData();
-  }, [setElectionInfo]);
-  
-  useEffect(() => {
-    if (electionInfo.endTime - now() < 0) return;
+
+    if (electionInfo.endTime - now() < 0) {
+      setRemainingTime(0);
+      return;
+    }
 
     const intervalId = setInterval(() => {
       setRemainingTime(electionInfo.endTime - now());
     }, 1000)
     
     return () => clearInterval(intervalId);
-  }, [electionInfo]);
+  }, [id, castVoteEvents, router, electionInfo]);
+
+
+  const handleDownload = () => {
+    // download as csv
+    let data = "from,electionIndex,candidateId,timestamp,blockNumber,blockHash,transactionHash\n";
+    data += castVoteEvents.map(vote => [
+      vote.from,
+      vote.electionIndex,
+      vote.candidateId,
+      vote.timestamp,
+      vote.blockNumber,
+      vote.blockHash,
+      vote.transactionHash
+    ]).join("\n");
+    const blob = new Blob([data], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${electionInfo.title}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  }
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center px-4 py-8">
@@ -159,7 +183,7 @@ export default function ElectionDisclosurePage({ params }: { params: { id: strin
           </Card>
           <Card className="bg-black text-white">
             <CardHeader>
-              <CardTitle>{timestampToDate(remainingTime).toLocaleTimeString()}</CardTitle>
+              <CardTitle>{timer(remainingTime)}</CardTitle>
             </CardHeader>
             <CardContent>Remaining Time</CardContent>
           </Card>
@@ -169,17 +193,22 @@ export default function ElectionDisclosurePage({ params }: { params: { id: strin
             </CardHeader>
             <CardContent>End Time</CardContent>
           </Card>
-        </div> 
+        </div>
+        { 
+          remainingTime <= 0 &&        
+          <Button className="py-4" onClick={handleDownload}>Download Result</Button>
+        }
         <div className="flex flex-row justify-center py-4 space-x-4">
-          <Card className="basis-1/2">
-            <CardHeader>
-              <CardTitle>Vote Result</CardTitle>
-            </CardHeader>
-            <CardContent className="pl-2">
-              <CustomBarChart data={candidateVotes} />
-            </CardContent>
-          </Card>
-          
+          { remainingTime <= 0 && (
+            <Card className="basis-1/2">
+              <CardHeader>
+                <CardTitle>Vote Result</CardTitle>
+              </CardHeader>
+              <CardContent className="pl-2">
+                <CustomBarChart data={candidateVotes} />
+              </CardContent>
+            </Card>
+          )}
           <Card className="basis-1/2">
             <CardHeader>
               <CardTitle>Total Vote vs Abstain</CardTitle>

@@ -23,16 +23,11 @@ export function sendOneTimeLink(email: string, redirectTo: string): Promise<[str
         url: redirectTo,
         handleCodeInApp: true,
     };
-    console.log(redirectTo)
-    const auth = getAuth();
+    const auth = getAuth(firebaseApp);
     return new Promise((resolve, reject) => {
         sendSignInLinkToEmail(auth, email, actionCodeSettings)
             .then(() => {
-                // The link was successfully sent. Inform the user.
-                // Save the email locally so you don't need to ask the user for it again
-                // if they open the link on the same device.
                 window.localStorage.setItem('emailForSignIn', email);
-
                 resolve(["Authentication link sent", true]);
             })
             .catch((error) => {

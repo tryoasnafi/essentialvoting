@@ -82,7 +82,7 @@ export default function VotingPage({ params }: { params: { id: string } }) {
 
       callElectionData();
     }
-  }, [voter, getElectionDetails]);
+  }, [voter, loading, id, router]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -110,8 +110,8 @@ export default function VotingPage({ params }: { params: { id: string } }) {
           <p> Cast Vote for {electionInfo.title} recorded successfully </p>
         ),
       })
-      setTimeout(userSignOut, 3000);
       router.push(`/elections/${id}/disclosure`);
+      userSignOut();
     } catch (e: any) {
       console.log(e.message);
       const revertedReason = e.message.split(", ")[2].split("=")[1];
