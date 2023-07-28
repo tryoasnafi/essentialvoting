@@ -51,7 +51,7 @@ export default function VotersLogin() {
 
     window.localStorage.setItem("electionId", elections[elections.length - 1].id);
 
-    const CURRENT_URL = `http://${window.location.host}/voters/login`;
+    const CURRENT_URL = `${window.location.protocol}//${window.location.host}/voters/login`;
     const [message, isSuccess] = await sendOneTimeLink(values.email, CURRENT_URL);
     if (!isSuccess) {
       setIsOneTimeLinkSent("0");
@@ -81,7 +81,7 @@ export default function VotersLogin() {
         const electionId = window.localStorage.getItem("electionId");
         console.log(electionId);
         if (isValid) {
-          const ELECTION_URL = `http://${window.location.host}/elections/${electionId}/vote`;
+          const ELECTION_URL = `${window.location.protocol}//${window.location.host}/elections/${electionId}/vote`;
           setIsOneTimeLinkSent("0");
           router.push(ELECTION_URL);
         }
