@@ -19,7 +19,7 @@ export default function CustomBarChart({ data }: { data: any }) {
           axisLine={false}
           tickFormatter={(value) => new Intl.NumberFormat('id-ID').format(value)}
         />
-        <Tooltip />
+        {/* <Tooltip /> */}
         <Legend />
         <Bar dataKey="votes" fill="#8884d8" radius={[4, 4, 0, 0]} />
       </BarChart>

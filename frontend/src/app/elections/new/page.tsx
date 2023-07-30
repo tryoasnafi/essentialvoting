@@ -17,11 +17,11 @@ import { toast } from "@/components/ui/use-toast";
 import InputCandidates from "@/components/ui/elections/input-candidates"
 import { DateTimePicker } from "@/components/ui/custom/date-time-picker";
 import { useRef, useState } from "react";
-import { BaseWallet, Contract, JsonRpcProvider, Signer, Wallet } from "ethers";
-import { dateToTimestamp, generateUUID } from "@/lib/utils";
-import { CONTRACT_ABI, CONTRACT_ADDRESS, NODE_RPC_URL } from "@/lib/contract";
+import { BaseWallet, Wallet } from "ethers";
+import { dateToTimestamp, generateULID } from "@/lib/utils";
+import { PROVIDER, generateWallets, getContract, newWallet } from "@/lib/contract";
 import PrivateKeyAlert from "@/components/ui/custom/private-key-alert";
-import { getVoterAddress, getVoterKey, saveElection, saveVoterKey } from "@/lib/firebase-config";
+import { checkIsKeyBindForEmail, saveElection, saveVoterKey } from "@/lib/firebase-config";
 
 const MEGABYTE = 1024 * 1024;
 const MAX_FILE_SIZE_MB = 2;
@@ -53,7 +53,7 @@ function parseCsv(file: File, separator = ","): Promise<Voter[]> {
       const textCsv: string = evt.target?.result as string;
       const csvLines = textCsv.split(/\r?\n/);
       csvLines.shift();
-      const voters: Voter[] = csvLines.map((line) => {
+      const voters: Voter[] = csvLines.filter((line) => !!line.trim()).map((line) => {
         const values = line.split(separator);
         return {
           name: values[0],
@@ -70,41 +70,14 @@ function parseCsv(file: File, separator = ","): Promise<Voter[]> {
   })
 }
 
-function getContract(runner: Signer): Contract {
-  return new Contract(CONTRACT_ADDRESS, CONTRACT_ABI, runner);
-}
-
-function newWallet(privateKey?: string): BaseWallet {
-  if (privateKey) {
-    return new Wallet(privateKey);
-  }
-  return Wallet.createRandom();
-}
-
-function generateWallets(total: number) {
-  // generate wallet for total
-  let wallets = [];
-  for(let i = 0; i < total; i++) {
-    wallets.push(newWallet());
-  }
-  return wallets;
-}
-
-const provider = new JsonRpcProvider(NODE_RPC_URL);
-provider.on("block", async (blockNumber) => {
-  const block = await provider.getBlock(blockNumber, true);
-  console.log("New block:", block);
-  console.log("Transactions:", block?.prefetchedTransactions);
-});
-
 
 export default function OrganizersLogin() {
-  const initialStartTime = new Date((new Date).getTime() + 30 * 60000);
-  const initialEndTime = new Date(initialStartTime.getTime() + 30 * 60000);
+  const initialStartTime = new Date((new Date).getTime() + 2 * 60000);
+  const initialEndTime = new Date(initialStartTime.getTime() + 5 * 60000);
   const [isPrivateKeyDialogOpen, setIsPrivateKeyDialogOpen] = useState(false);
   const [privateKey, setPrivateKey] = useState("");
   const [electionTitle, setElectionTitle] = useState("");
-  const uuid = useRef(generateUUID());
+  const uuid = useRef(generateULID());
   const disclosurePageUrl = `/elections/${uuid.current}/disclosure`;
 
   // TODO: inserting each address voters
@@ -127,9 +100,26 @@ export default function OrganizersLogin() {
   async function onSubmit(values: z.infer<typeof ElectionSchema>) {
     const voters = await parseCsv(values.votersCsv[0]);
     const walletOrganizer = Wallet.createRandom();
-    const randomWalletVoter = generateWallets(voters.length);
+    let initTotalNewWallet = voters.length;
 
-    const owner = await provider.getSigner();
+    const votersAddress: string[] = [];
+
+    for (let i = 0; i < voters.length; i++) {
+      const [key, isExist] = await checkIsKeyBindForEmail(voters[i].email);
+      if (isExist) {
+        console.log(isExist, voters[i].email)
+        const wallet = newWallet(key);
+        votersAddress.push(wallet.address);
+        initTotalNewWallet--;
+      }
+    }
+
+    const randomWalletVoter = generateWallets(initTotalNewWallet);
+    console.log("LOG: ", initTotalNewWallet, randomWalletVoter)
+    votersAddress.push(...randomWalletVoter.map((w) => w.address));
+    console.log(voters.length, votersAddress, voters.length === votersAddress.length)
+  
+    const owner = await PROVIDER.getSigner();
     const electionContract = getContract(owner);
     try {
       await electionContract.createElection(
@@ -137,7 +127,7 @@ export default function OrganizersLogin() {
         values.candidates.map(c => c.value),
         dateToTimestamp(values.startTime),
         dateToTimestamp(values.endTime), 
-        randomWalletVoter.map((w) => w.address)
+        votersAddress
       );
 
       const lastIndex = parseInt(await electionContract.counter()) - 1;
@@ -152,23 +142,23 @@ export default function OrganizersLogin() {
 
       // send eth to each wallet
       const ONE_PERMILLE_ETH = "1000000000000000";
-      randomWalletVoter.forEach(async (wallet, i) => {
-        const [address, isExist] = await getVoterAddress(voters[i].email);
-        let walletAddress = wallet.address;
-        
+      votersAddress.forEach(async (address) => {
         await owner.sendTransaction({
-          to: walletAddress,
+          to: address,
           value: ONE_PERMILLE_ETH,
         });
+      });
 
-        // binding wallet to voter
-        saveVoterKey(voters[i].email, wallet.address.toLowerCase(), wallet.privateKey);
+      // save new voter key
+      console.log("newWallet ", randomWalletVoter.length)
+      randomWalletVoter.forEach(async (wallet, i) => {
+        saveVoterKey(voters[i].email, wallet.address, wallet.privateKey);
       });
 
       toast({
         title: "Election Created Successfully",
         description: (
-          <pre>{JSON.stringify(values, null, 2)}</pre>
+          <p>{values.votingName} start at {values.startTime.toLocaleString()} and end at {values.endTime.toLocaleString()}. There are {values.candidates.length} candidates and {voters.length} voters</p>
         ),
       })
       

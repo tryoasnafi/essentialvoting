@@ -142,4 +142,13 @@ export async function getElectionsByEmail(email: string): Promise<ElectionStoreR
     return result;
 }
 
+export async function checkIsKeyBindForEmail(email: string): Promise<[string, boolean]> {
+    const voterKeyDocRef = doc(voterKeyRef, email);
+    const docSnap = await getDoc(voterKeyDocRef);
+    if (docSnap.exists()) {
+        return [docSnap.data().key, true];
+    }
+    return ["", false];
+}
+
 export default firebaseApp;

@@ -1,5 +1,5 @@
 import EssentialVoting from '../../public/EssentialVoting.json';
-import { Contract, EventLog, Interface, JsonRpcProvider, Wallet, id } from "ethers";
+import { BaseWallet, Contract, EventLog, JsonRpcProvider, Signer, Wallet } from "ethers";
 import { Election } from './types';
 import { getElectionById } from './firebase-config';
 
@@ -8,12 +8,25 @@ export const CONTRACT_ADDRESS = '0x5fbdb2315678afecb367f032d93f642f64180aa3';
 export const NODE_RPC_URL = process.env.NGROK_NODE_RPC_URL || 'http://localhost:8545';
 
 export const PROVIDER = new JsonRpcProvider(NODE_RPC_URL);
-function claimMyWallet(privateKey: string) {
-    return new Wallet(privateKey);
+
+export function newWallet(privateKey?: string): BaseWallet {
+    if (privateKey) {
+        return new Wallet(privateKey);
+    }
+    return Wallet.createRandom();
 }
 
-function getContract(wallet: Wallet) {
-    return new Contract(CONTRACT_ADDRESS, CONTRACT_ABI, wallet);
+export function generateWallets(total: number) {
+    // generate wallet for total
+    let wallets = [];
+    for (let i = 0; i < total; i++) {
+        wallets.push(newWallet());
+    }
+    return wallets;
+}
+
+export function getContract(runner: Signer): Contract {
+    return new Contract(CONTRACT_ADDRESS, CONTRACT_ABI, runner);
 }
 
 export async function getElectionDetails(contract: Contract, id: string): Promise<Election | null> {
@@ -21,7 +34,7 @@ export async function getElectionDetails(contract: Contract, id: string): Promis
     if (!data) return null;
     const { electionIndex, totalVoters } = data;
     const election = await contract.getElectionByIndex(electionIndex);
-
+    console.log(election)
     return {
         id: id,
         electionIndex: electionIndex,

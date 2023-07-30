@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity >=0.4.16 <0.9.0;
 
-import "hardhat/console.sol";
-
 contract EssentialVoting {
     uint256 public counter = 0;
 
@@ -43,7 +41,7 @@ contract EssentialVoting {
     ) external {
         require(candidates.length >= 2, "must have at least 2 candidates");
         require(
-            startTime > block.timestamp,
+            startTime >= block.timestamp,
             "start time must be in the future"
         );
         require(endTime > startTime, "end time must be after start time");
@@ -72,9 +70,10 @@ contract EssentialVoting {
     function castVote(uint256 index, uint256 candidateId) external {
         require(eligibleVoter[index][msg.sender], "voter not eligible");
         require(!hasVoted[index][msg.sender], "voter has already voted");
+        // console.log(_elections[index].startTime, _elections[index].endTime, block.timestamp);
         require(
-            block.timestamp < _elections[index].endTime,
-            "vote cast after the end time"
+            (block.timestamp >= _elections[index].startTime) && (block.timestamp <= _elections[index].endTime),
+            "vote cast not during election time"
         );
         _tally[index][candidateId]++;
         hasVoted[index][msg.sender] = true;
@@ -86,7 +85,12 @@ contract EssentialVoting {
         uint256 index,
         uint256 candidateId
     ) external view returns (uint256) {
-        require(block.timestamp > _elections[index].endTime, "tally before the end time");
+        // console.log(_elections[index].startTime, _elections[index].endTime, block.timestamp);
+        // tally only available after the end time of election
+        require(
+            block.timestamp >= _elections[index].endTime,
+            "the tally before the end time"
+        );
         return _tally[index][candidateId];
     }
 }

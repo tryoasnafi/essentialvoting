@@ -23,7 +23,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getElectionById, getVoterKey as getVoterKeyByEmail, userSignOut } from "@/lib/firebase-config";
 import { Contract, JsonRpcProvider, Wallet, ethers } from "ethers";
-import { CONTRACT_ABI, CONTRACT_ADDRESS, PROVIDER, getElectionDetails } from "@/lib/contract";
+import { CONTRACT_ABI, CONTRACT_ADDRESS, PROVIDER, getContract, getElectionDetails } from "@/lib/contract";
 
 const formSchema = z.object({
   candidate: z.string(),
@@ -35,6 +35,7 @@ export default function VotingPage({ params }: { params: { id: string } }) {
   const { voter, loading } = useAuthContext();
   const key = useRef("");
   const address = useRef("");
+  const balance = useRef(0);
   const [electionInfo, setElectionInfo] = useState({
     id: "",
     electionIndex: 0,
@@ -61,7 +62,10 @@ export default function VotingPage({ params }: { params: { id: string } }) {
 
         const signer = new Wallet(key.current, PROVIDER);
         address.current = signer.address;
-        const contract = new Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+        const contract = getContract(signer);
+        PROVIDER.getBalance(signer.address).then((b) => {
+          balance.current = parseInt(`${b}`);
+        })
 
         const electionDetails = await getElectionDetails(contract, id);
         if (!electionDetails) {
@@ -94,7 +98,7 @@ export default function VotingPage({ params }: { params: { id: string } }) {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       const signer = new Wallet(key.current, PROVIDER);
-      const contract = new Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+      const contract = getContract(signer);
       const data = await getElectionById(id);
       if (!data) {
         router.push("/");
@@ -111,7 +115,7 @@ export default function VotingPage({ params }: { params: { id: string } }) {
         ),
       })
       router.push(`/elections/${id}/disclosure`);
-      userSignOut();
+      // userSignOut();
     } catch (e: any) {
       console.log(e.message);
       const revertedReason = e.message.split(", ")[2].split("=")[1];
@@ -158,7 +162,7 @@ export default function VotingPage({ params }: { params: { id: string } }) {
             )}
           />
 
-          <p className="text-sm text-gray-500"> This is your address: <br /> {address.current.toLowerCase()} </p>
+          <p className="text-sm text-gray-500"> This is your address: <br /> {address.current} <br/> with balance {ethers.formatEther(balance.current)} ETH </p>
 
           <AlertDialog>
             <AlertDialogTrigger asChild>

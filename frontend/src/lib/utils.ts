@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { ulid } from 'ulid'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -19,8 +20,12 @@ const MINUTE = 60 * SECOND;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 
-export function timestampToDate(timestamp: number) {
-  return new Date(timestamp * 1000);
+export function timestampToDateString(timestamp: number): string {
+  const date = new Date(timestamp * 1000);
+  let formattedDate = `${date.getFullYear()}-${twoDigitsTime(date.getMonth())}-${twoDigitsTime(date.getDate())}`;
+  formattedDate += ` ${twoDigitsTime(date.getHours())}:${twoDigitsTime(date.getMinutes())}`;
+
+  return formattedDate;
 }
 
 
@@ -58,3 +63,7 @@ export function generateUUID() {
     return (c == 'x' ? r : (r & 0x7 | 0x8)).toString(16);
   });
 };
+
+export function generateULID() {
+  return ulid();
+}
