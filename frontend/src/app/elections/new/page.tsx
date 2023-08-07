@@ -17,7 +17,7 @@ import { toast } from "@/components/ui/use-toast";
 import InputCandidates from "@/components/ui/elections/input-candidates"
 import { DateTimePicker } from "@/components/ui/custom/date-time-picker";
 import { useRef, useState } from "react";
-import { BaseWallet, Wallet } from "ethers";
+import { Wallet } from "ethers";
 import { dateToTimestamp, generateULID } from "@/lib/utils";
 import { PROVIDER, generateWallets, getContract, newWallet } from "@/lib/contract";
 import PrivateKeyAlert from "@/components/ui/custom/private-key-alert";
