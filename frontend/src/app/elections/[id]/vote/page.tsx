@@ -61,7 +61,7 @@ export default function VotingPage({ params }: { params: { id: string } }) {
         key.current = data
         console.log("PROVIDER", PROVIDER);
         console.log("NODE_RPC_URL", NODE_RPC_URL);
-        console.log("ENV NODE_RPC_URL", process.env.NGROK_NODE_RPC_URL);
+        console.log("ENV NODE_RPC_URL", process.env.NEXT_PUBLIC_NGROK_NODE_RPC_URL);
         const signer = new Wallet(key.current, PROVIDER);
         address.current = signer.address;
         const contract = getContract(signer);
