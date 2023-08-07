@@ -21,7 +21,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getElectionById, getVoterKey as getVoterKeyByEmail } from "@/lib/firebase-config";
 import { Wallet, ethers } from "ethers";
-import { PROVIDER, getContract, getElectionDetails } from "@/lib/contract";
+import { NODE_RPC_URL, PROVIDER, getContract, getElectionDetails } from "@/lib/contract";
 
 const formSchema = z.object({
   candidate: z.string(),
