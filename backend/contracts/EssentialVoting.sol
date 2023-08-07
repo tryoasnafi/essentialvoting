@@ -87,10 +87,10 @@ contract EssentialVoting {
     ) external view returns (uint256) {
         // console.log(_elections[index].startTime, _elections[index].endTime, block.timestamp);
         // tally only available after the end time of election
-        require(
-            block.timestamp >= _elections[index].endTime,
-            "the tally before the end time"
-        );
+        // require(
+        //     block.timestamp >= _elections[index].endTime,
+        //     "the tally before the end time"
+        // );
         return _tally[index][candidateId];
     }
 }

@@ -58,14 +58,18 @@ export default function VotingPage({ params }: { params: { id: string } }) {
         if (!isSuccess) return;
         key.current = data
 
-        const signer = new Wallet(key.current, PROVIDER);
+        const signer = new Wallet(data, PROVIDER);
         address.current = signer.address;
+        console.log("address", signer.address);
         const contract = getContract(signer);
+        console.log("contract", contract);
         PROVIDER.getBalance(signer.address).then((b) => {
+          console.log("balance", b);
           balance.current = parseInt(`${b}`);
         })
 
         const electionDetails = await getElectionDetails(contract, id);
+        console.log("electionDetails", electionDetails);
         if (!electionDetails) {
           router.push("/");
           return;
