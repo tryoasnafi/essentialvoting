@@ -47,18 +47,25 @@ export default function VotingPage({ params }: { params: { id: string } }) {
   // now for simplity, it is stored in the database 
   useEffect(() => {
     if (!loading) {
+      console.trace()
       if (!voter.uid) {
         router.push("/voters/login");
         return;
       }
 
+      console.trace()
       const callElectionData = async () => {
         // validate private key
+        
+        console.trace()
         const [data, isSuccess] = await getVoterKeyByEmail(voter.email);
         if (!isSuccess) return;
         key.current = data
 
+        console.trace()
         const signer = new Wallet(data, PROVIDER);
+        
+        console.trace()
         address.current = signer.address;
         console.log("address", signer.address);
         const contract = getContract(signer);
