@@ -2,14 +2,12 @@
 
 import * as z from "zod"
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Mail, Send } from "lucide-react";
+import { Send } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -18,12 +16,12 @@ import {
 import { toast } from "@/components/ui/use-toast";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import AuthContextProvider, { useAuthContext } from "@/context/auth-context";
+import { useAuthContext } from "@/context/auth-context";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getElectionById, getVoterKey as getVoterKeyByEmail, userSignOut } from "@/lib/firebase-config";
-import { Contract, JsonRpcProvider, Wallet, ethers } from "ethers";
-import { CONTRACT_ABI, CONTRACT_ADDRESS, PROVIDER, getContract, getElectionDetails } from "@/lib/contract";
+import { getElectionById, getVoterKey as getVoterKeyByEmail } from "@/lib/firebase-config";
+import { Wallet, ethers } from "ethers";
+import { NODE_RPC_URL, PROVIDER, getContract, getElectionDetails } from "@/lib/contract";
 
 const formSchema = z.object({
   candidate: z.string(),

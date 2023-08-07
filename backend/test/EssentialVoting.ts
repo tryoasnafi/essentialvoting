@@ -33,7 +33,7 @@ describe("EssentialVoting", function () {
         endTime = await time.latest() + 300;
     })
 
-    xdescribe("Creating an election", function () {
+    describe("Creating an election", function () {
         it("should create an election", async function () {
             await contract.createElection(title, candidates, startTime, endTime, [voter1.address]);
 
@@ -68,18 +68,18 @@ describe("EssentialVoting", function () {
             await contract.connect(voter1).castVote(0, 2);
             // expect(await contract.hasVoted(0, voter1.address)).to.eq(true);
         })
-        xit("should revert if the voter not eligible", async function () {
+        it("should revert if the voter not eligible", async function () {
             await contract.createElection(title, candidates, startTime, endTime, [voter1.address]);
             await time.increaseTo(await time.latest() + 61);
             await expect(contract.connect(voter2).castVote(0, 2)).to.be.revertedWith("voter not eligible")
         })
-        xit("should revert if voter already voted", async function () {
+        it("should revert if voter already voted", async function () {
             await contract.connect(voter1).createElection(title, candidates, startTime, endTime, [voter1.address]);
             await time.increaseTo(await time.latest() + 61);
             await contract.connect(voter1).castVote(0, 2);
             await expect(contract.connect(voter1).castVote(0, 2)).to.be.revertedWith("voter has already voted")
         })
-        xit("should revert if the vote cast after the end time", async function () {
+        it("should revert if the vote cast after the end time", async function () {
             await contract.connect(voter1).createElection(title, candidates, startTime, endTime, [voter1.address]);
             await time.increaseTo(await time.latest() + 301);
             await expect(contract.connect(voter1).castVote(0, 2)).to.be.revertedWith("vote cast after the end time")
@@ -87,12 +87,12 @@ describe("EssentialVoting", function () {
     });
 
     describe("Tallying the votes", function () {
-        xit("should tally the votes", async function () {
+        it("should tally the votes", async function () {
             await contract.connect(voter1).createElection(title, candidates, startTime, endTime, [voter1.address]);
             await time.increaseTo(await time.latest() + 61);
             await contract.connect(voter1).castVote(0, 2);
         })
-        it("should revert if the tally before the end time", async function () {
+        xit("should revert if the tally before the end time", async function () {
             await contract.connect(voter1).createElection(title, candidates, startTime, endTime, [voter1.address]);
             await time.increaseTo(await time.latest() + 150);
             await contract.connect(voter1).castVote(0, 2);
