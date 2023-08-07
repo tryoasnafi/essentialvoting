@@ -23,7 +23,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getElectionById, getVoterKey as getVoterKeyByEmail, userSignOut } from "@/lib/firebase-config";
 import { Contract, JsonRpcProvider, Wallet, ethers } from "ethers";
-import { CONTRACT_ABI, CONTRACT_ADDRESS, PROVIDER, getContract, getElectionDetails } from "@/lib/contract";
+import { CONTRACT_ABI, CONTRACT_ADDRESS, NODE_RPC_URL, PROVIDER, getContract, getElectionDetails } from "@/lib/contract";
 
 const formSchema = z.object({
   candidate: z.string(),
@@ -59,7 +59,9 @@ export default function VotingPage({ params }: { params: { id: string } }) {
         const [data, isSuccess] = await getVoterKeyByEmail(voter.email);
         if (!isSuccess) return;
         key.current = data
-
+        console.log("PROVIDER", PROVIDER);
+        console.log("NODE_RPC_URL", NODE_RPC_URL);
+        console.log("ENV NODE_RPC_URL", process.env.NGROK_NODE_RPC_URL);
         const signer = new Wallet(key.current, PROVIDER);
         address.current = signer.address;
         const contract = getContract(signer);
