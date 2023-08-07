@@ -9,11 +9,10 @@ import { NODE_RPC_URL, PROVIDER } from '@/lib/contract'
 
 const inter = Inter({ subsets: ['latin'] })
 
-export const metadata: Metadata = {
-  title: 'Essential Voting',
-  description: 'Secure and trustful elections backed by blockchain technology.',
-}
-
+// export const metadata: Metadata = {
+//   title: 'Essential Voting',
+//   description: 'Secure and trustful elections backed by blockchain technology.',
+// }
 
 console.log("LOG PROVIDER", PROVIDER);
 console.log("LOG NODE RPC URL", NODE_RPC_URL);
