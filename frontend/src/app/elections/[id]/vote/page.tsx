@@ -58,39 +58,44 @@ export default function VotingPage({ params }: { params: { id: string } }) {
         // validate private key
         
         console.trace()
-        const [data, isSuccess] = await getVoterKeyByEmail(voter.email);
-        if (!isSuccess) return;
-        key.current = data
+        try {
+          const [data, isSuccess] = await getVoterKeyByEmail(voter.email);
+          console.log("LOG isSuccess", isSuccess);
+          console.log("LOG data", data);
+          if (!isSuccess) return;
+          key.current = data
 
-        console.trace()
-        const signer = new Wallet(data, PROVIDER);
-        
-        console.trace()
-        address.current = signer.address;
-        console.log("address", signer.address);
-        const contract = getContract(signer);
-        console.log("contract", contract);
-        PROVIDER.getBalance(signer.address).then((b) => {
-          console.log("balance", b);
-          balance.current = parseInt(`${b}`);
-        })
+          const signer = new Wallet(data, PROVIDER);
+          
+          address.current = signer.address;
+          console.log("address", signer.address);
+          const contract = getContract(signer);
+          console.log("contract", contract);
+          PROVIDER.getBalance(signer.address).then((b) => {
+            console.log("balance", b);
+            balance.current = parseInt(`${b}`);
+          })
+  
+          const electionDetails = await getElectionDetails(contract, id);
+          console.log("electionDetails", electionDetails);
+          if (!electionDetails) {
+            router.push("/");
+            return;
+          };
+          const { id: electionId, electionIndex, title, startTime, endTime, candidates, totalVoters } = electionDetails
+          setElectionInfo({
+            title,
+            id: electionId,
+            electionIndex: electionIndex!!,
+            startTime: startTime!!,
+            endTime: endTime!!,
+            candidates: candidates!!.map((c: string, i: number) => ({ value: `${i}`, label: c })),
+            totalVoters: totalVoters!!
+          });
+        } catch (error) {
+          console.error(error);
+        }
 
-        const electionDetails = await getElectionDetails(contract, id);
-        console.log("electionDetails", electionDetails);
-        if (!electionDetails) {
-          router.push("/");
-          return;
-        };
-        const { id: electionId, electionIndex, title, startTime, endTime, candidates, totalVoters } = electionDetails
-        setElectionInfo({
-          title,
-          id: electionId,
-          electionIndex: electionIndex!!,
-          startTime: startTime!!,
-          endTime: endTime!!,
-          candidates: candidates!!.map((c: string, i: number) => ({ value: `${i}`, label: c })),
-          totalVoters: totalVoters!!
-        });
       }
 
       callElectionData();

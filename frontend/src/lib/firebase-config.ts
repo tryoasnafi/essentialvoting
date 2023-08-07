@@ -94,6 +94,7 @@ export async function saveVoterKey(email: string, address: string, key: string) 
 }
 
 export async function getVoterKey(email: string): Promise<[string, boolean]> {
+    console.log("LOG email", email);
     const voterKeyDocRef = doc(voterKeyRef, email);
     const docSnap = await getDoc(voterKeyDocRef);
     if (docSnap.exists()) {
