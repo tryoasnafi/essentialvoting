@@ -26,7 +26,12 @@ const config: HardhatUserConfig = {
   solidity: "0.8.4",
   networks: {
     hardhat: {
-      chainId: 1337
+      chainId: 1337,
+      accounts: {
+        count: 500,
+        accountsBalance: "1000000000000000000000000000"
+      },
+      blockGasLimit: 1000004297200000
     },
     ropsten: {
       url: process.env.ROPSTEN_URL || "",
